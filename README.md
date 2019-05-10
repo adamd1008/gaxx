@@ -97,4 +97,4 @@ D:\Work\gaxx\src\x64\Release>gaxx 100 30 1000 -1934068580
 [G1000] | BEST = 2      | "PJHS*?"
 ```
 
-This time we didn't find a collision. We only found a string that has a has code with a difference of 2 from the target hash.
+This time we didn't find a collision. We only found a string that has a hash code with a difference of 2 from the target hash.

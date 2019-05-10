@@ -321,10 +321,15 @@ int main(int argc, char** argv)
         long genCount = strtol(argv[3], nullptr, 10);
         long hash = strtol(argv[4], nullptr, 10);
 
-        if ((popSize < 0) || (popSize > INT_MAX) ||
-                (breedCount < 0) || (breedCount > INT_MAX) ||
-                (genCount < 0) || (genCount > INT_MAX) ||
-                (hash < INT_MIN) || (hash > INT_MAX))
+        /* - breed# must be at least 2.
+         * - pop# must be at least one more than breed#.
+         * - gen# must be at least 1. */
+
+        if ((popSize < 3) || (popSize > INT_MAX) ||
+                (breedCount < 2) || (breedCount > INT_MAX) ||
+                (genCount < 1) || (genCount > INT_MAX) ||
+                (hash < INT_MIN) || (hash > INT_MAX) ||
+                (breedCount >= popSize))
         {
             fprintf(stderr, "Invalid input\n");
             return EXIT_FAILURE;

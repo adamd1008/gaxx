@@ -28,9 +28,14 @@ namespace gaxx
         }
 
 
-        virtual void initWithMutate(Phenotype<TFT>&) = 0;
-        virtual void crossoverWith(Phenotype<TFT>&) = 0;
+        void initWithMutateCrossover(Phenotype<TFT>& pt1, Phenotype<TFT>& pt2)
+        {
+            getGenotype().initWithMutateCrossover(
+                    pt1.getGenotype(), pt2.getGenotype());
+        }
+
         virtual bool isFitterThan(const Phenotype<TFT>&, TFT) const = 0;
+        virtual bool isOptimalFitness(TFT) const = 0;
 
     protected:
         virtual Genotype<TFT>& getGenotype() = 0;

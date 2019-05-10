@@ -19,8 +19,9 @@ namespace gaxx
         virtual ~Genotype<TFT>() = default;
 
         virtual void init() = 0;
-        virtual void initWithMutate(const Genotype<TFT>&) = 0;
-        virtual void crossoverWith(const Genotype<TFT>&) = 0;
+        virtual void initWithMutateCrossover(
+                const Genotype<TFT>&,
+                const Genotype<TFT>&) = 0;
     };
 }
 

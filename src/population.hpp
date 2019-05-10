@@ -1,7 +1,8 @@
 #ifndef __POPULATION_HPP__
 #define __POPULATION_HPP__
 
-#include <stdint.h>
+#include <cstdint>
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include "phenotype.hpp"
@@ -34,35 +35,57 @@ namespace gaxx
 
         void runForGenerations(uint32_t gens, uint32_t breedCount)
         {
-            for (uint32_t i = 0; i <= gens; i++)
+            assert(breedCount >= 2);
+            assert(breedCount < _count);
+
+            bool done = false;
+            auto optimalFitFunc = [&](P obj) -> bool
             {
-                assert(breedCount >= 2);
-                assert(breedCount < _count);
+                return obj.isOptimalFitness(_target);
+            };
 
-                cbUpdate(i, _indiv, _target);
+            cbUpdate(0, _indiv, _target);
 
-                std::vector<P> shortList = getBest(breedCount);
-                _indiv.clear();
-
-                for (uint32_t j = 0; j < (_count - breedCount); j++)
+            for (uint32_t i = 1; (i <= gens) && (!done); i++)
+            {
+                if (std::any_of(_indiv.begin(), _indiv.end(), optimalFitFunc))
                 {
-                    uint32_t bestIndex1 = j % breedCount;
-                    uint32_t bestIndex2 = (j + 1) % breedCount;
-
-                    P pt;
-                    pt.initWithMutate(shortList[bestIndex1]);
-                    pt.crossoverWith(shortList[bestIndex2]);
-
-                    _indiv.push_back(pt);
+                    done = true;
                 }
-
-                assert((_indiv.size() + breedCount) == _count);
-
-                for (uint32_t j = 0; j < breedCount; j++)
+                else
                 {
-                    auto it = shortList.begin();
-                    std::advance(it, j);
-                    _indiv.push_back(*it);
+                    doGen(breedCount);
+                    cbUpdate(i, _indiv, _target);
+                }
+            }
+        }
+
+
+        void run(uint32_t breedCount)
+        {
+            assert(breedCount >= 2);
+            assert(breedCount < _count);
+
+            uint64_t i = 1;
+            bool done = false;
+            auto optimalFitFunc = [&](P obj) -> bool
+            {
+                return obj.isOptimalFitness(_target);
+            };
+
+            cbUpdate(0, _indiv, _target);
+
+            while (!done)
+            {
+                if (std::any_of(_indiv.begin(), _indiv.end(), optimalFitFunc))
+                {
+                    done = true;
+                }
+                else
+                {
+                    doGen(breedCount);
+                    cbUpdate(i, _indiv, _target);
+                    i++;
                 }
             }
         }
@@ -115,6 +138,37 @@ namespace gaxx
 
 
     private:
+        void doGen(uint32_t breedCount)
+        {
+            std::vector<P> shortList = getBest(breedCount);
+            assert(shortList.size() == breedCount);
+
+            _indiv.clear();
+
+            for (uint32_t j = 0; j < (_count - breedCount); j++)
+            {
+                uint32_t bestIndex1 = j % breedCount;
+                uint32_t bestIndex2 = (j + 1) % breedCount;
+
+                P pt;
+                pt.initWithMutateCrossover(
+                        shortList[bestIndex1],
+                        shortList[bestIndex2]);
+
+                _indiv.push_back(pt);
+            }
+
+            assert((_indiv.size() + breedCount) == _count);
+
+            for (uint32_t j = 0; j < breedCount; j++)
+            {
+                auto it = shortList.begin();
+                std::advance(it, j);
+                _indiv.push_back(*it);
+            }
+        }
+
+
         std::vector<P> _indiv;
         TFT _target;
         const uint32_t _count;

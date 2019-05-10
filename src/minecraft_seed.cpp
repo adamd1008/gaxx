@@ -34,25 +34,16 @@ public:
         : Genotype<int32_t>()
     {
         _val = new char[SEED_LEN];
-        copyFrom(other.getValue());
+        copyValFrom(other.getValue());
+        _hash = other._hash;
     }
 
 
     SeedGenotype& operator=(const SeedGenotype& other)
     {
-        copyFrom(other.getValue());
+        copyValFrom(other.getValue());
+        _hash = other._hash;
         return *this;
-    }
-
-
-    void copyFrom(const char* otherVal)
-    {
-        size_t otherLen = strlen(otherVal);
-        assert(otherLen > 0);
-        assert(otherLen < SEED_LEN);
-
-        strncpy(_val, otherVal, SEED_LEN);
-        assert(_val[SEED_LEN - 1] == 0);
     }
 
 
@@ -64,18 +55,23 @@ public:
             _val[i] = getNewChar();
 
         _val[len] = 0;
+
+        // Update fitness
+        _hash = hashCode(_val);
     }
 
 
-    void initWithMutate(const Genotype<int32_t>& _other) override
+    void initWithMutateCrossover(
+            const Genotype<int32_t>& _other1,
+            const Genotype<int32_t>& _other2) override
     {
-        const SeedGenotype& other = static_cast<const SeedGenotype&>(_other);
-        const char* otherVal = other.getValue();
-        size_t otherLen = strlen(otherVal);
+        const SeedGenotype& other1 = static_cast<const SeedGenotype&>(_other1);
+        const char* other1Val = other1.getValue();
+        size_t other1Len = strlen(other1Val);
         int thresh;
-        assert(otherLen > 0);
+        assert(other1Len > 0);
 
-        for (uint32_t i = 0; i < otherLen; i++)
+        for (uint32_t i = 0; i < other1Len; i++)
         {
             // Probability of mutating a character
             thresh = RAND_MAX / 2;
@@ -90,14 +86,14 @@ public:
                     // Pick a bit between 1-8 (actually use a 0-7 shift)
                     int r = (rand() & 0xff) / 32;
                     int mask = 1 << r;
-                    out = otherVal[i] ^ mask;
+                    out = other1Val[i] ^ mask;
                 } while (!isprint(out));
 
                 _val[i] = out;
             }
             else
             {
-                _val[i] = otherVal[i];
+                _val[i] = other1Val[i];
             }
         }
 
@@ -109,35 +105,31 @@ public:
             int test = rand();
             thresh = RAND_MAX / 2;
 
-            if ((test < thresh) && (otherLen < (SEED_LEN - 1)))
+            if ((test < thresh) && (other1Len < (SEED_LEN - 1)))
             {
-                int noToAdd = (rand() % ((SEED_LEN - 1) - otherLen)) + 1;
+                int noToAdd = (rand() % ((SEED_LEN - 1) - other1Len)) + 1;
                 assert(noToAdd > 0);
-                assert((otherLen + noToAdd) < SEED_LEN);
+                assert((other1Len + noToAdd) < SEED_LEN);
 
                 for (int i = 0; i < noToAdd; i++)
                 {
-                    _val[otherLen + i] = getNewChar();
+                    _val[other1Len + i] = getNewChar();
                 }
 
-                _val[otherLen + noToAdd] = 0;
+                _val[other1Len + noToAdd] = 0;
             }
-            else if ((test >= thresh) && (otherLen > 1))
+            else if ((test >= thresh) && (other1Len > 1))
             {
-                int newLen = (rand() % (otherLen - 1)) + 1;
+                int newLen = (rand() % (other1Len - 1)) + 1;
                 assert(newLen > 0);
                 _val[newLen] = 0;
             }
         }
-    }
 
+        // TODO crossover
 
-    void crossoverWith(const Genotype<int32_t>& _other) override
-    {
-        const SeedGenotype& other = static_cast<const SeedGenotype&>(_other);
-        size_t thisLen = strlen(_val);
-        const char* otherVal = other.getValue();
-        //size_t otherLen = strlen(otherVal); // TODO
+        // Update fitness
+        _hash = hashCode(_val);
     }
 
 
@@ -172,9 +164,7 @@ public:
 
     uint64_t getFitness(int32_t target) const
     {
-        int32_t hash = hashCode(_val);
-        uint64_t diff = abs(hash - target);
-
+        uint64_t diff = abs(_hash - target);
         return diff;
     }
 
@@ -200,7 +190,19 @@ protected:
 
 
 private:
+    void copyValFrom(const char* otherVal)
+    {
+        size_t otherLen = strlen(otherVal);
+        assert(otherLen > 0);
+        assert(otherLen < SEED_LEN);
+
+        strncpy(_val, otherVal, SEED_LEN);
+        assert(_val[SEED_LEN - 1] == 0);
+    }
+
+
     char* _val;
+    int32_t _hash;
 };
 
 
@@ -212,32 +214,18 @@ public:
     virtual ~SeedPhenotype() = default;
 
 
-    void initWithMutate(Phenotype<int32_t>& _other) override
-    {
-        SeedPhenotype& other = static_cast<SeedPhenotype&>(_other);
-        const SeedGenotype& gt =
-            static_cast<const SeedGenotype&>(other.getGenotype());
-
-        _gt.initWithMutate(gt);
-    }
-
-
-    void crossoverWith(Phenotype<int32_t>& _other) override
-    {
-        SeedPhenotype& other = static_cast<SeedPhenotype&>(_other);
-        const SeedGenotype& gt =
-            static_cast<const SeedGenotype&>(other.getGenotype());
-
-        _gt.crossoverWith(gt);
-    }
-
-
     bool isFitterThan(
             const Phenotype<int32_t>& _other,
             int32_t target) const override
     {
         const SeedPhenotype& other = static_cast<const SeedPhenotype&>(_other);
         return getFitness(target) < other.getFitness(target);
+    }
+
+
+    bool isOptimalFitness(int32_t target) const override
+    {
+        return getFitness(target) == 0;
     }
 
 
@@ -301,8 +289,10 @@ public:
             //        gen, gt.getFitness(target), gt.getValue());
         }
 
+        const SeedPhenotype& pt =
+            static_cast<const SeedPhenotype&>(indiv[bestFitIdx]);
         const SeedGenotype& gt =
-            static_cast<const SeedGenotype&>(indiv[bestFitIdx].getGenotype());
+            static_cast<const SeedGenotype&>(pt.getGenotype());
         //printf("*\n[G%u]\t| BEST = %lu\t| \"%s\"\n",
         //        gen, gt.getFitness(target), gt.getValue());
         printf("[G%u]\t| BEST = %lu\t| \"%s\"\n",
@@ -314,12 +304,21 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-    if (argc == 5)
+    if ((argc == 4) || (argc == 5))
     {
         long popSize = strtol(argv[1], nullptr, 10);
         long breedCount = strtol(argv[2], nullptr, 10);
-        long genCount = strtol(argv[3], nullptr, 10);
-        long hash = strtol(argv[4], nullptr, 10);
+        long genCount, hash;
+
+        if (argc == 4)
+        {
+            hash = strtol(argv[3], nullptr, 10);
+        }
+        else
+        {
+            genCount = strtol(argv[3], nullptr, 10);
+            hash = strtol(argv[4], nullptr, 10);
+        }
 
         /* - breed# must be at least 2.
          * - pop# must be at least one more than breed#.
@@ -327,9 +326,9 @@ int main(int argc, char** argv)
 
         if ((popSize < 3) || (popSize > INT_MAX) ||
                 (breedCount < 2) || (breedCount > INT_MAX) ||
-                (genCount < 1) || (genCount > INT_MAX) ||
                 (hash < INT_MIN) || (hash > INT_MAX) ||
-                (breedCount >= popSize))
+                (breedCount >= popSize) ||
+                ((argc == 5) && ((genCount < 1) || (genCount > INT_MAX))))
         {
             fprintf(stderr, "Invalid input\n");
             return EXIT_FAILURE;
@@ -341,9 +340,13 @@ int main(int argc, char** argv)
             SeedPopulation pop(
                     static_cast<uint64_t>(popSize),
                     static_cast<int32_t>(hash));
-            pop.runForGenerations(
-                    static_cast<uint32_t>(genCount),
-                    static_cast<uint32_t>(breedCount));
+
+            if (argc == 5)
+                pop.runForGenerations(
+                        static_cast<uint32_t>(genCount),
+                        static_cast<uint32_t>(breedCount));
+            else
+                pop.run(static_cast<uint32_t>(breedCount));
 
             return EXIT_SUCCESS;
         }

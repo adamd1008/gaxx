@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++11 -g -I./libgaxx
+CXXFLAGS=-std=c++11 -g
 LDFLAGS=
 
 MY_SOURCES=$(wildcard *.cpp)

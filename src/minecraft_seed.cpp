@@ -353,7 +353,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        fprintf(stderr, "Usage: %s <pop#> <breed#> <gen#> <hash>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <pop#> <breed#> [gen#] <hash>\n", argv[0]);
         return EXIT_FAILURE;
     }
 }

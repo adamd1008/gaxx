@@ -293,11 +293,21 @@ public:
             static_cast<const SeedPhenotype&>(indiv[bestFitIdx]);
         const SeedGenotype& gt =
             static_cast<const SeedGenotype&>(pt.getGenotype());
+
         //printf("*\n[G%u]\t| BEST = %lu\t| \"%s\"\n",
         //        gen, gt.getFitness(target), gt.getValue());
-        printf("[G%u]\t| BEST = %lu\t| \"%s\"\n",
-                gen, gt.getFitness(target), gt.getValue());
+
+        uint64_t thisFit = gt.getFitness(target);
+
+        if (thisFit < _bestFit)
+        {
+            printf("[G%u]\t| BEST = %lu\t| \"%s\"\n",
+                    gen, thisFit, gt.getValue());
+            _bestFit = thisFit;
+        }
     }
+
+    uint64_t _bestFit = std::numeric_limits<uint64_t>::max();
 };
 
 
